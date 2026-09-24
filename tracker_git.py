@@ -1,168 +1,120 @@
-import os
-import sys
-import json
 import requests
+import json
+import sys
 
 
-PARSE_API_KEY = os.environ.get("PARSE_API_KEY")
+URL = "https://www.futbin.com/27/playerPrices"
 
-API_URL = (
-    "https://api.parse.bot/"
-    "scraper/21963078-8a17-40ff-a896-9b0b0ec3e828/"
-    "get_fc27_market_snapshot"
-)
-
-
-PLAYERS = [
-    ("Bradley Barcola", 21977),
-    ("Paulo Dybala", 466),
-    ("Emiliano Martinez", 21976),
-    ("Temwa Chawinga", 20),
+PLAYER_IDS = [
+    21977,
+    466,
+    21976,
+    20,
 ]
 
 
 print("=" * 70)
-print("FC 27 PARSE FUTBIN API TEST")
+print("FC 27 FUTBIN BATCH PRICE TEST")
 print("=" * 70)
 
-if not PARSE_API_KEY:
-    print()
-    print("FEHLER: PARSE_API_KEY wurde nicht gefunden.")
-    print("Bitte prüfen, ob das GitHub Secret korrekt angelegt wurde.")
-    sys.exit(1)
-
-
-player_ids = ",".join(str(player_id) for _, player_id in PLAYERS)
+rids = ",".join(str(x) for x in PLAYER_IDS)
 
 params = {
-    "year": "27",
-    "platform": "ps",
-    "player_ids": player_ids,
+    "player": "",
+    "rids": rids,
 }
 
 headers = {
-    "X-API-Key": PARSE_API_KEY,
-    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://www.futbin.com/",
 }
 
-
 print()
-print("Spieler insgesamt:", len(PLAYERS))
-print("Player IDs:", player_ids)
-print("Jahr: 27")
-print("Plattform: PlayStation")
+print("Spieler:", len(PLAYER_IDS))
+print("RIDs:", rids)
 print()
-print("Kein Chrome.")
-print("Kein Playwright.")
-print("Kein Google Sheet.")
-print("Nur Parse API.")
-print()
-print("API-Aufruf:")
-print(API_URL)
-print()
-print("=" * 70)
-
+print("URL:")
+print(URL)
 
 try:
     response = requests.get(
-        API_URL,
+        URL,
         params=params,
         headers=headers,
-        timeout=60,
+        timeout=30,
     )
 
+    print()
     print("HTTP Status:", response.status_code)
     print("Final URL:", response.url)
-    print()
 
-    print("ROHE ANTWORT:")
+    print()
+    print("ANTWORT:")
     print("-" * 70)
     print(response.text[:10000])
     print("-" * 70)
 
     if response.status_code != 200:
         print()
-        print("FEHLER: Parse API hat keinen HTTP-200-Status geliefert.")
+        print(">>> BATCH REQUEST NICHT ERFOLGREICH")
         sys.exit(1)
 
-    try:
-        data = response.json()
-    except Exception as error:
-        print()
-        print("FEHLER: Antwort ist kein gültiges JSON.")
-        print(error)
-        sys.exit(1)
+    data = response.json()
 
     print()
-    print("JSON:")
-    print("-" * 70)
-    print(json.dumps(data, indent=2, ensure_ascii=False))
-    print("-" * 70)
-
-    # Parse kann die eigentlichen Daten in "data" zurückgeben.
-    payload = data.get("data", data)
-
-    players = payload.get("players", [])
-
+    print("JSON ERFOLGREICH GELESEN")
     print()
-    print("=" * 70)
-    print("AUSGELESENE PREISE")
-    print("=" * 70)
 
-    if not players:
-        print("Keine Spieler im Ergebnis gefunden.")
-        sys.exit(1)
-
-    names_by_id = {
-        player_id: name
-        for name, player_id in PLAYERS
+    names = {
+        21977: "Bradley Barcola",
+        466: "Paulo Dybala",
+        21976: "Emiliano Martinez",
+        20: "Temwa Chawinga",
     }
 
     successful = 0
 
-    for player in players:
-        player_id = player.get("player_id")
-        price = player.get("price")
+    print("=" * 70)
+    print("PLAYSTATION PREISE")
+    print("=" * 70)
 
-        name = names_by_id.get(
-            player_id,
-            f"Unbekannter Spieler ({player_id})"
-        )
+    for player_id in PLAYER_IDS:
+
+        player = data.get(str(player_id))
 
         print()
-        print(f"Spieler: {name}")
-        print(f"ID:      {player_id}")
-        print(f"Preis:   {price}")
+        print("Spieler:", names.get(player_id, str(player_id)))
+        print("ID:", player_id)
+
+        if not player:
+            print("Preis: NICHT GEFUNDEN")
+            continue
+
+        prices = player.get("prices", {})
+        ps = prices.get("ps", {})
+
+        price = ps.get("LCPrice")
+
+        print("Preis:", price)
 
         if price is not None:
-            print("STATUS:  PREIS GEFUNDEN")
             successful += 1
-        else:
-            print("STATUS:  KEIN PREIS")
 
     print()
     print("=" * 70)
-    print(f"ERGEBNIS: {successful}/{len(PLAYERS)} Preise gefunden")
+    print(f"ERGEBNIS: {successful}/{len(PLAYER_IDS)}")
     print("=" * 70)
 
-    if successful == len(PLAYERS):
+    if successful == len(PLAYER_IDS):
         print()
-        print(">>> PARSE TEST ERFOLGREICH <<<")
+        print(">>> BATCH SNAPSHOT FUNKTIONIERT <<<")
         sys.exit(0)
 
-    print()
-    print(">>> PARSE ERREICHT, ABER NICHT ALLE PREISE GEFUNDEN <<<")
-    sys.exit(1)
-
-
-except requests.RequestException as error:
-    print()
-    print("REQUEST FEHLER:")
-    print(type(error).__name__, error)
     sys.exit(1)
 
 except Exception as error:
     print()
-    print("UNBEKANNTER FEHLER:")
+    print("FEHLER:")
     print(type(error).__name__, error)
     sys.exit(1)
