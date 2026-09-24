@@ -17,6 +17,7 @@ async function main() {
   console.log("URL:", playerUrl);
   console.log();
 
+  console.log("Runtime: Bun");
   console.log("Starte FUTBIN-Abfrage...");
   console.log();
 
@@ -29,15 +30,12 @@ async function main() {
     console.log("=".repeat(70));
     console.log();
 
-    console.log(
-      JSON.stringify(result, null, 2)
-    );
+    console.log(JSON.stringify(result, null, 2));
 
     console.log();
     console.log("=".repeat(70));
     console.log("TEST ABGESCHLOSSEN");
     console.log("=".repeat(70));
-
   } catch (error) {
     console.log();
     console.log("=".repeat(70));
