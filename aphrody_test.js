@@ -9,10 +9,14 @@ async function main() {
   console.log("APHRODY / FUTBIN TEST");
   console.log("=".repeat(70));
   console.log();
+
   console.log("Spieler: Bradley Barcola");
   console.log("FUTBIN ID: 21977");
+  console.log("FC Jahr: 27");
+  console.log("Plattform: PlayStation");
   console.log("URL:", playerUrl);
   console.log();
+
   console.log("Starte FUTBIN-Abfrage...");
   console.log();
 
@@ -25,7 +29,9 @@ async function main() {
     console.log("=".repeat(70));
     console.log();
 
-    console.log(JSON.stringify(result, null, 2));
+    console.log(
+      JSON.stringify(result, null, 2)
+    );
 
     console.log();
     console.log("=".repeat(70));
