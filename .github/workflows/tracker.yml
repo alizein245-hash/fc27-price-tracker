@@ -1,0 +1,31 @@
+name: FC 27 Price Tracker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tracker:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Playwright installieren
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Tracker starten
+        env:
+          GOOGLE_WEBHOOK: ${{ secrets.GOOGLE_WEBHOOK }}
+        run: |
+          python tracker_git.py
