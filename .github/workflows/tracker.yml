@@ -1,5 +1,5 @@
 
-name: Aphrody FUTBIN Test
+name: FUTBIN SDK Test
 
 on:
   workflow_dispatch:
@@ -15,20 +15,43 @@ jobs:
       - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Bun einrichten
-        uses: oven-sh/setup-bun@v2
+      - name: Python einrichten
+        uses: actions/setup-python@v5
         with:
-          bun-version: latest
+          python-version: "3.12"
 
-      - name: Pakete installieren
+      - name: FUTBIN SDK installieren
         run: |
-          bun init -y
-          bun add @aphrody/fut @aphrody/bxc
+          python -m pip install --upgrade pip
+          python -m pip install git+https://github.com/daojiAnime/futbin-sdk.git
 
-      - name: Installierte Pakete prüfen
+      - name: Barcola testen
         run: |
-          bun pm ls
+          python - <<'PY'
+          from futbin_sdk import FutbinClient
 
-      - name: FUTBIN testen
-        run: |
-          bun run aphrody_test.js
+          print("=" * 70)
+          print("FUTBIN SDK TEST")
+          print("=" * 70)
+          print("Spieler: Bradley Barcola")
+          print("FUTBIN ID: 21977")
+          print("Plattform: PlayStation")
+          print()
+
+          client = FutbinClient()
+
+          try:
+              result = client.get_player_price(
+                  player_id=21977,
+                  platform="PS"
+              )
+
+              print("ROHES ERGEBNIS:")
+              print(result)
+
+          except Exception as e:
+              print("FEHLER:")
+              print(type(e).__name__)
+              print(str(e))
+              raise
+          PY
