@@ -15,21 +15,16 @@ jobs:
       - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Node.js einrichten
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
-      - name: Bun installieren
+      - name: Bun einrichten
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Abhängigkeiten installieren
         run: |
-          npm init -y
-          npm install @aphrody/fut @aphrody/bxc tsx
+          bun init -y
+          bun add @aphrody/fut
 
       - name: FUTBIN testen
         run: |
-          npx tsx aphrody_test.js
+          bun run aphrody_test.js
