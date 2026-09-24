@@ -1,5 +1,5 @@
 
-name: FUTBIN CLI Test
+name: FUTBIN Browser Fallback Test
 
 on:
   workflow_dispatch:
@@ -20,22 +20,66 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: cli-web-futbin installieren
+      - name: FUTBIN CLI installieren
         run: |
           python -m pip install --upgrade pip
           python -m pip install cli-web-futbin
 
-      - name: FUTBIN Barcola testen
+      - name: Camoufox installieren
         run: |
-          echo "=============================================="
-          echo "FUTBIN CLI TEST"
-          echo "=============================================="
-          echo "Spieler: Bradley Barcola"
-          echo "FC Jahr: 27"
-          echo "Plattform: PlayStation"
-          echo
+          python -m camoufox fetch
 
-          cli-web-futbin players search \
-            --name "Bradley Barcola" \
-            --year 27 \
-            --json
+      - name: FUTBIN Browser Test
+        run: |
+          python - <<'PY'
+          from camoufox.sync_api import Camoufox
+
+          url = "https://www.futbin.com/27/player/21977/bradley-barcola"
+
+          print("=" * 70)
+          print("FUTBIN BROWSER TEST")
+          print("=" * 70)
+          print("Spieler: Bradley Barcola")
+          print("FUTBIN ID: 21977")
+          print("URL:", url)
+          print()
+
+          with Camoufox(headless=True) as browser:
+              page = browser.new_page()
+
+              print("Öffne FUTBIN...")
+              response = page.goto(
+                  url,
+                  wait_until="domcontentloaded",
+                  timeout=60000
+              )
+
+              print("HTTP Status:", response.status if response else "unbekannt")
+              print("Titel:", page.title())
+              print("URL nach Navigation:", page.url)
+
+              page.wait_for_timeout(5000)
+
+              print()
+              print("Seitentext (erste 5000 Zeichen):")
+              print("-" * 70)
+              print(page.locator("body").inner_text()[:5000])
+              print("-" * 70)
+
+              page.screenshot(
+                  path="futbin-test.png",
+                  full_page=True
+              )
+
+              print()
+              print("Screenshot gespeichert: futbin-test.png")
+          PY
+
+      - name: Screenshot hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: futbin-browser-test
+          path: futbin-test.png
+          if-no-files-found: ignore
+
