@@ -1,285 +1,201 @@
-import json
 import os
-import re
-import urllib.request
-from datetime import datetime, timezone
+import sys
+import json
+import time
+import requests
 
-from playwright.sync_api import sync_playwright
-
-
-# ============================================================
-# SPIELER
-# ============================================================
 
 PLAYERS = [
     {
         "name": "Bradley Barcola",
-        "url": "https://www.futbin.com/27/player/21977/bradley-barcola",
+        "resource_id": 21977,
     },
     {
         "name": "Paulo Dybala",
-        "url": "https://www.futbin.com/27/player/466/paulo-dybala",
+        "resource_id": 466,
     },
     {
         "name": "Emiliano Martinez",
-        "url": "https://www.futbin.com/27/player/21976/emiliano-martinez",
+        "resource_id": 21976,
     },
     {
         "name": "Temwa Chawinga",
-        "url": "https://www.futbin.com/27/player/20/temwa-chawinga",
+        "resource_id": 20,
     },
 ]
 
+BASE_URL = "https://www.futbin.org/futbin/api/27/fetchPriceInformation"
 
-# ============================================================
-# GOOGLE SHEETS WEBHOOK
-# ============================================================
-
-GOOGLE_WEBHOOK = os.environ.get("GOOGLE_WEBHOOK")
-
-if not GOOGLE_WEBHOOK:
-    raise RuntimeError(
-        "GOOGLE_WEBHOOK wurde nicht gefunden. "
-        "Bitte das GitHub Secret prüfen."
-    )
-
-
-# ============================================================
-# PREIS AUS FUTBIN-SEITENTEXT ERMITTELN
-# ============================================================
-
-def extract_price(text):
-    """
-    Sucht plausible FUTBIN-Preise im sichtbaren Seitentext.
-    """
-
-    candidates = []
-
-    patterns = [
-        r"\b\d{1,3}(?:[.,]\d{3})+\b",
-        r"\b\d{4,7}\b",
-    ]
-
-    for pattern in patterns:
-        matches = re.findall(pattern, text)
-
-        for raw in matches:
-            cleaned = raw.replace(".", "").replace(",", "")
-
-            try:
-                value = int(cleaned)
-            except ValueError:
-                continue
-
-            # FUT-Preis sinnvoll begrenzen
-            if 200 <= value <= 15_000_000:
-                candidates.append(value)
-
-    if not candidates:
-        return None
-
-    # Doppelte Werte entfernen
-    candidates = sorted(set(candidates))
-
-    print("Gefundene plausible Zahlen:", candidates[:30])
-
-    # Vorläufig kleinsten plausiblen Wert verwenden
-    return candidates[0]
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.futbin.com/",
+}
 
 
-# ============================================================
-# EINEN SPIELER ABFRAGEN
-# ============================================================
+def get_price(player):
+    name = player["name"]
+    resource_id = player["resource_id"]
 
-def get_player_price(page, player):
-
-    print()
-    print("=" * 60)
-    print(f"Spieler: {player['name']}")
-    print(f"URL: {player['url']}")
-    print("=" * 60)
-
-    page.goto(
-        player["url"],
-        wait_until="domcontentloaded",
-        timeout=60_000,
-    )
-
-    # Warten, damit dynamische Inhalte geladen werden
-    page.wait_for_timeout(7_000)
-
-    # Etwas scrollen
-    page.mouse.wheel(0, 1200)
-    page.wait_for_timeout(2_000)
-
-    text = page.locator("body").inner_text()
-
-    print(f"Seitentext: {len(text)} Zeichen")
-
-    # Cloudflare / Browser-Challenge erkennen
-    challenge_words = [
-        "Just a moment",
-        "Checking your browser",
-        "Verify you are human",
-        "Performing security verification",
-    ]
-
-    for word in challenge_words:
-        if word.lower() in text.lower():
-            raise RuntimeError(
-                f"FUTBIN-Browser-Challenge erkannt: {word}"
-            )
-
-    price = extract_price(text)
-
-    if price is None:
-        print("KEIN PREIS GEFUNDEN.")
-
-        print()
-        print("---- SEITENTEXT AUSZUG ----")
-        print(text[:5000])
-        print("---- ENDE AUSZUG ----")
-
-        return None
-
-    print(f"ERKANNTER PREIS: {price:,}")
-
-    return price
-
-
-# ============================================================
-# DATEN AN GOOGLE SHEETS SENDEN
-# ============================================================
-
-def send_to_google(prices):
-
-    payload = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "prices": prices,
+    params = {
+        "playerresource": resource_id,
+        "platform": "PS",
     }
 
     print()
     print("=" * 60)
-    print("Sende Daten an Google Sheets")
-    print("=" * 60)
+    print(f"Spieler: {name}")
+    print(f"Resource ID: {resource_id}")
+    print(f"URL: {BASE_URL}")
+    print(f"Parameter: {params}")
+    print("-" * 60)
 
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=20,
+        )
 
-    data = json.dumps(payload).encode("utf-8")
-
-    request = urllib.request.Request(
-        GOOGLE_WEBHOOK,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    with urllib.request.urlopen(request, timeout=30) as response:
-
-        response_text = response.read().decode("utf-8")
+        print(f"HTTP Status: {response.status_code}")
+        print(f"Final URL: {response.url}")
 
         print()
-        print("Google Sheets Antwort:")
-        print(response_text)
+        print("Antwort:")
+        print(response.text[:5000])
 
-        if response.status != 200:
-            raise RuntimeError(
-                f"Google Webhook HTTP-Fehler: {response.status}"
-            )
+        if response.status_code != 200:
+            print()
+            print(f"FEHLER: HTTP {response.status_code}")
+            return None
 
+        try:
+            data = response.json()
+        except Exception as error:
+            print(f"FEHLER: Antwort ist kein JSON: {error}")
+            return None
 
-# ============================================================
-# HAUPTPROGRAMM
-# ============================================================
+        print()
+        print("JSON:")
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+
+        price = data.get("LCPrice")
+
+        print()
+        print(f"LCPrice: {price}")
+
+        if price is None:
+            print("KEIN LCPrice in der Antwort gefunden.")
+            return None
+
+        try:
+            price = int(price)
+        except (ValueError, TypeError):
+            print(f"LCPrice konnte nicht in Zahl umgewandelt werden: {price}")
+            return None
+
+        if price <= 0:
+            print(f"Preis ist nicht positiv: {price}")
+            return None
+
+        print(f"SUCCESS: {name} = {price:,} Coins")
+
+        return {
+            "name": name,
+            "resource_id": resource_id,
+            "price": price,
+        }
+
+    except requests.exceptions.Timeout:
+        print("FEHLER: Timeout beim Request.")
+        return None
+
+    except requests.exceptions.RequestException as error:
+        print(f"FEHLER beim HTTP-Request: {error}")
+        return None
+
+    except Exception as error:
+        print(f"UNBEKANNTER FEHLER: {type(error).__name__}: {error}")
+        return None
+
 
 def main():
+    print()
+    print("=" * 60)
+    print("FC 27 FUTBIN DIRECT API TEST")
+    print("=" * 60)
+    print()
+    print("Kein Chrome.")
+    print("Kein Playwright.")
+    print("Kein Google Sheet.")
+    print("Nur direkter HTTP-Test gegen futbin.org.")
+    print()
+    print(f"Spieler insgesamt: {len(PLAYERS)}")
 
     results = []
 
+    for player in PLAYERS:
+        result = get_price(player)
+
+        if result:
+            results.append(result)
+
+        # Kleine Pause zwischen den Requests
+        time.sleep(1)
+
+    print()
     print("=" * 60)
-    print("FC 27 FUTBIN PRICE TRACKER")
+    print("ERGEBNIS")
     print("=" * 60)
 
-    print(f"Spieler insgesamt: {len(PLAYERS)}")
+    print(f"Erfolgreich: {len(results)}/{len(PLAYERS)}")
+    print()
 
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(
-            headless=True,
-        )
-
-        for player in PLAYERS:
-
-            context = browser.new_context(
-                viewport={
-                    "width": 1365,
-                    "height": 900,
-                },
-                locale="en-US",
-                user_agent=(
-                    "Mozilla/5.0 (X11; Linux x86_64) "
-                    "AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) "
-                    "Chrome/140.0.0.0 Safari/537.36"
-                ),
+    if results:
+        for result in results:
+            print(
+                f"{result['name']}: "
+                f"{result['price']:,} Coins "
+                f"(ID {result['resource_id']})"
             )
 
-            page = context.new_page()
-
-            try:
-
-                price = get_player_price(
-                    page,
-                    player,
-                )
-
-                if price is not None:
-
-                    results.append(
-                        {
-                            "name": player["name"],
-                            "price": price,
-                        }
-                    )
-
-            except Exception as error:
-
-                print()
-                print(
-                    f"FEHLER bei {player['name']}: "
-                    f"{type(error).__name__}: {error}"
-                )
-
-            finally:
-
-                context.close()
-
-        browser.close()
-
     print()
     print("=" * 60)
-    print(
-        f"ERGEBNIS: {len(results)}/{len(PLAYERS)} Spieler erfolgreich"
-    )
-    print("=" * 60)
 
-    if not results:
+    if len(results) == len(PLAYERS):
+        print("🎉 ALLE SPIELER ERFOLGREICH!")
+        print()
+        print("Der direkte FUTBIN-Endpoint funktioniert.")
+        print("Als nächsten Schritt können wir den Tracker")
+        print("ohne Chrome aufbauen.")
+        print("=" * 60)
 
-        raise RuntimeError(
-            "Kein einziger Spielerpreis konnte ermittelt werden."
-        )
+        sys.exit(0)
 
-    send_to_google(results)
+    elif len(results) > 0:
+        print("TEILWEISE ERFOLGREICH.")
+        print()
+        print("Mindestens ein Spieler konnte abgefragt werden.")
+        print("Die Antwort müssen wir genauer untersuchen.")
+        print("=" * 60)
 
-    print()
-    print("Tracker erfolgreich beendet.")
+        sys.exit(1)
 
+    else:
+        print("KEIN SPIELER ERFOLGREICH.")
+        print()
+        print("Der direkte Endpoint funktioniert aus GitHub Actions")
+        print("entweder nicht oder benötigt zusätzliche Parameter.")
+        print("=" * 60)
 
-# ============================================================
-# START
-# ============================================================
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
