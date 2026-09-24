@@ -1,0 +1,30 @@
+
+name: Aphrody FUTBIN Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Aphrody installieren
+        run: |
+          npm init -y
+          npm install @aphrody/fut
+
+      - name: FUTBIN testen
+        run: |
+          node aphrody_test.js
