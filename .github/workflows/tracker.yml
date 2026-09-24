@@ -20,10 +20,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Aphrody und TypeScript Runner installieren
+      - name: Aphrody und Abhängigkeiten installieren
         run: |
           npm init -y
-          npm install @aphrody/fut tsx
+          npm install @aphrody/fut @aphrody/bxc tsx
 
       - name: FUTBIN testen
         run: |
