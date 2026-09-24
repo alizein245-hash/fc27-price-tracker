@@ -1,20 +1,11 @@
-
 import os
 import time
 import json
 import requests
 
-# ============================================================
-# ANAKIN / FUTBIN TEST
-# FC 27 - PlayStation
-# Bradley Barcola
-# ============================================================
-
 API_KEY = os.environ["ANAKIN_API_KEY"]
 
 BASE_URL = "https://anakin.io"
-
-ACTION_ID = "act_futbin_com_player_detail"
 
 PLAYER = {
     "name": "Bradley Barcola",
@@ -28,12 +19,8 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# ------------------------------------------------------------
-# 1. FUTBIN-Abfrage über Anakin starten
-# ------------------------------------------------------------
-
 payload = {
-    "action_id": ACTION_ID,
+    "action_id": "act_futbin_com_player_detail",
     "params": {
         "game_year": PLAYER["game_year"],
         "player_id": PLAYER["player_id"],
@@ -81,10 +68,6 @@ print()
 print("Warte auf FUTBIN-Ergebnis...")
 print()
 
-# ------------------------------------------------------------
-# 2. Job pollen
-# ------------------------------------------------------------
-
 MAX_ATTEMPTS = 30
 WAIT_SECONDS = 3
 
@@ -121,25 +104,20 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
         final_result = result
         break
 
+if final_result is None:
+    print()
+    print("=" * 70)
+    print("TIMEOUT")
+    print("=" * 70)
+    print()
+    print("Nach 90 Sekunden wurde kein Ergebnis geliefert.")
+    raise SystemExit(1)
+
 print()
-
-# ------------------------------------------------------------
-# 3. Ergebnis ausgeben
-# ------------------------------------------------------------
-
 print("=" * 70)
 print("ERGEBNIS")
 print("=" * 70)
 print()
-
-if final_result is None:
-    print("TIMEOUT")
-    print(
-        "Nach",
-        MAX_ATTEMPTS * WAIT_SECONDS,
-        "Sekunden wurde kein Ergebnis geliefert."
-    )
-    raise SystemExit(1)
 
 print(
     json.dumps(
@@ -150,10 +128,6 @@ print(
 )
 
 print()
-
-# ------------------------------------------------------------
-# 4. Ergebnis bewerten
-# ------------------------------------------------------------
 
 status = final_result.get("status")
 
@@ -168,14 +142,6 @@ if status == "completed":
     if credits is not None:
         print("Credits verwendet:", credits)
 
-    print()
-    print("Die komplette FUTBIN-Antwort steht oben.")
-    print()
-    print(
-        "Bitte diese Ausgabe hier im Chat posten, "
-        "damit wir den PS-Preis identifizieren können."
-    )
-
 elif status == "failed":
 
     print("=" * 70)
@@ -184,13 +150,12 @@ elif status == "failed":
 
     error = final_result.get("error")
 
-    print()
-    print("Fehler:")
-    print(json.dumps(error, indent=2, ensure_ascii=False))
-
-    print()
     print(
-        "Bitte diese Ausgabe hier im Chat posten."
+        json.dumps(
+            error,
+            indent=2,
+            ensure_ascii=False
+        )
     )
 
 else:
@@ -200,44 +165,3 @@ else:
     print("=" * 70)
 
     print("Status:", status)
-```
-
-### 2. GitHub-Workflow
-
-Lege zusätzlich unter
-
-`.github/workflows/`
-
-eine neue Datei an, zum Beispiel:
-
-`anakin-player-test.yml`
-
-mit:
-
-```yaml
-name: Anakin FUTBIN Player Test
-
-on:
-  workflow_dispatch:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
-    steps:
-
-      - name: Repository auschecken
-        uses: actions/checkout@v4
-
-      - name: Python einrichten
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Requests installieren
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install re
