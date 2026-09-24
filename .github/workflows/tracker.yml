@@ -19,13 +19,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Playwright installieren
+      - name: Requests installieren
         run: |
-          pip install playwright
-          playwright install --with-deps chromium
+          python -m pip install --upgrade pip
+          python -m pip install requests
 
-      - name: Tracker starten
-        env:
-          GOOGLE_WEBHOOK: ${{ secrets.GOOGLE_WEBHOOK }}
+      - name: Requests Installation prüfen
+        run: |
+          python -c "import requests; print('requests Version:', requests.__version__)"
+
+      - name: FUTBIN API testen
         run: |
           python tracker_git.py
