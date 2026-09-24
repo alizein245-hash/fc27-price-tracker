@@ -24,10 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install requests
 
-      - name: Requests Installation prüfen
-        run: |
-          python -c "import requests; print('requests Version:', requests.__version__)"
-
-      - name: FUTBIN API testen
+      - name: Parse FUTBIN API testen
+        env:
+          PARSE_API_KEY: ${{ secrets.PARSE_API_KEY }}
         run: |
           python tracker_git.py
