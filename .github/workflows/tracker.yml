@@ -28,30 +28,35 @@ jobs:
       - name: Barcola testen
         run: |
           python - <<'PY'
+          import asyncio
           from futbin_sdk import FutbinClient
 
-          print("=" * 70)
-          print("FUTBIN SDK TEST")
-          print("=" * 70)
-          print("Spieler: Bradley Barcola")
-          print("FUTBIN ID: 21977")
-          print("Plattform: PlayStation")
-          print()
+          async def main():
+              print("=" * 70)
+              print("FUTBIN SDK TEST")
+              print("=" * 70)
+              print("Spieler: Bradley Barcola")
+              print("FUTBIN ID: 21977")
+              print("Plattform: PlayStation")
+              print()
 
-          client = FutbinClient()
+              client = FutbinClient()
 
-          try:
-              result = client.get_player_price(
-                  player_id=21977,
-                  platform="PS"
-              )
+              try:
+                  result = await client.get_player_price(
+                      player_id=21977,
+                      platform="PS"
+                  )
 
-              print("ROHES ERGEBNIS:")
-              print(result)
+                  print("ROHES ERGEBNIS:")
+                  print(result)
 
-          except Exception as e:
-              print("FEHLER:")
-              print(type(e).__name__)
-              print(str(e))
-              raise
+              except Exception as e:
+                  print("FEHLER:")
+                  print(type(e).__name__)
+                  print(str(e))
+                  raise
+
+          asyncio.run(main())
           PY
+
