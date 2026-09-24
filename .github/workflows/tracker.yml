@@ -1,5 +1,5 @@
 
-name: Anakin FUTBIN Test
+name: Aphrody FUTBIN Test
 
 on:
   workflow_dispatch:
@@ -8,19 +8,23 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Python einrichten
-        uses: actions/setup-python@v5
+      - name: Node.js einrichten
+        uses: actions/setup-node@v5
         with:
-          python-version: "3.12"
+          node-version: 22
 
-      - name: Requests installieren
-        run: python -m pip install requests
+      - name: Aphrody installieren
+        run: |
+          npm init -y
+          npm install @aphrody/fut
 
-      - name: Anakin FUTBIN testen
-        env:
-          ANAKIN_API_KEY: ${{ secrets.ANAKIN_API_KEY }}
-        run: python anakin_test.py
+      - name: FUTBIN testen
+        run: |
+          node aphrody_test.js
