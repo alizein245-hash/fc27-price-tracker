@@ -20,7 +20,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: Aphrody und Abhängigkeiten installieren
+      - name: Bun installieren
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Abhängigkeiten installieren
         run: |
           npm init -y
           npm install @aphrody/fut @aphrody/bxc tsx
