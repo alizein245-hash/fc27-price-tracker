@@ -1,120 +1,63 @@
+
+import os
 import requests
-import json
-import sys
 
-
-URL = "https://www.futbin.com/27/playerPrices"
-
-PLAYER_IDS = [
-    21977,
-    466,
-    21976,
-    20,
-]
-
-
-print("=" * 70)
-print("FC 27 FUTBIN BATCH PRICE TEST")
-print("=" * 70)
-
-rids = ",".join(str(x) for x in PLAYER_IDS)
-
-params = {
-    "player": "",
-    "rids": rids,
+PLAYERS = {
+    21977: "Bradley Barcola",
+    466: "Paulo Dybala",
+    21976: "Emiliano Martinez",
+    20: "Temwa Chawinga",
 }
+
+BASE_URL = "https://www.futbin.org/futbin/api/27/fetchPriceInformation"
 
 headers = {
-    "User-Agent": "Mozilla/5.0",
-    "Accept": "application/json, text/plain, */*",
-    "Referer": "https://www.futbin.com/",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,text/plain,*/*",
 }
 
-print()
-print("Spieler:", len(PLAYER_IDS))
-print("RIDs:", rids)
-print()
-print("URL:")
-print(URL)
+for player_id, player_name in PLAYERS.items():
+    print(f"\nTeste {player_name} ({player_id})")
 
-try:
-    response = requests.get(
-        URL,
-        params=params,
-        headers=headers,
-        timeout=30,
-    )
-
-    print()
-    print("HTTP Status:", response.status_code)
-    print("Final URL:", response.url)
-
-    print()
-    print("ANTWORT:")
-    print("-" * 70)
-    print(response.text[:10000])
-    print("-" * 70)
-
-    if response.status_code != 200:
-        print()
-        print(">>> BATCH REQUEST NICHT ERFOLGREICH")
-        sys.exit(1)
-
-    data = response.json()
-
-    print()
-    print("JSON ERFOLGREICH GELESEN")
-    print()
-
-    names = {
-        21977: "Bradley Barcola",
-        466: "Paulo Dybala",
-        21976: "Emiliano Martinez",
-        20: "Temwa Chawinga",
+    params = {
+        "playerresource": player_id,
+        "platform": "PS",
     }
 
-    successful = 0
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            headers=headers,
+            timeout=20,
+        )
 
-    print("=" * 70)
-    print("PLAYSTATION PREISE")
-    print("=" * 70)
+        print("HTTP:", response.status_code)
+        print("URL:", response.url)
+        print("Content-Type:", response.headers.get("content-type"))
 
-    for player_id in PLAYER_IDS:
+        print("Antwort:")
+        print(response.text[:2000])
 
-        player = data.get(str(player_id))
+        if response.status_code == 200:
+            try:
+                data = response.json()
 
-        print()
-        print("Spieler:", names.get(player_id, str(player_id)))
-        print("ID:", player_id)
+                print("JSON:", data)
 
-        if not player:
-            print("Preis: NICHT GEFUNDEN")
-            continue
+                price = data.get("LCPrice")
 
-        prices = player.get("prices", {})
-        ps = prices.get("ps", {})
+                if price is not None:
+                    print(f"FUTBIN PREIS: {price:,}")
+                else:
+                    print("LCPrice nicht gefunden.")
 
-        price = ps.get("LCPrice")
+            except Exception as e:
+                print("JSON konnte nicht gelesen werden:", e)
 
-        print("Preis:", price)
-
-        if price is not None:
-            successful += 1
-
-    print()
-    print("=" * 70)
-    print(f"ERGEBNIS: {successful}/{len(PLAYER_IDS)}")
-    print("=" * 70)
-
-    if successful == len(PLAYER_IDS):
-        print()
-        print(">>> BATCH SNAPSHOT FUNKTIONIERT <<<")
-        sys.exit(0)
-
-    sys.exit(1)
-
-except Exception as error:
-    print()
-    print("FEHLER:")
-    print(type(error).__name__, error)
-    sys.exit(1)
+    except Exception as e:
+        print("REQUEST FEHLER:", repr(e))
