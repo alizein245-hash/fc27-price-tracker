@@ -1,10 +1,11 @@
-name: FC 27 Price Tracker
+
+name: FUTBIN Endpoint Test
 
 on:
   workflow_dispatch:
 
 jobs:
-  tracker:
+  test:
     runs-on: ubuntu-latest
 
     permissions:
@@ -24,8 +25,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install requests
 
-      - name: Parse FUTBIN API testen
-        env:
-          PARSE_API_KEY: ${{ secrets.PARSE_API_KEY }}
+      - name: FUTBIN testen
         run: |
           python tracker_git.py
